@@ -1,0 +1,44 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/Users/coogan/matter-labs/cross-chain/L2-counter/contracts/counter.sol": {
+      "lastModificationDate": 1676476169174,
+      "contentHash": "a117770346cefc7870481c40dd16d880",
+      "sourceName": "contracts/counter.sol",
+      "solcConfig": {
+        "version": "0.8.16",
+        "settings": {
+          "optimizer": {
+            "enabled": true
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.methodIdentifiers"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        },
+        "zksolc": {
+          "version": "1.3.1",
+          "compilerSource": "binary",
+          "settings": {
+            "compilerPath": "",
+            "experimental": {}
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.16"
+      ],
+      "artifacts": [
+        "Counter"
+      ]
+    }
+  }
+}
