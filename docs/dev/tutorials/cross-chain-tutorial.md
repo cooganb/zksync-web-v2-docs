@@ -5,8 +5,8 @@ This tutorial serves as an example of how to implement L1 to L2 contract interac
 - A "counter" smart contract is deployed on zkSync, which stores a number that can be incremented by calling the `increment` method.
 - A "governance" smart contract is deployed on layer 1, which has the privilege to increment the counter on zkSync.
 
-
-
+<TocHeader />
+<TOC class="table-of-contents" :include-level="[2,3]" />
 
 ::: warning
 
@@ -18,9 +18,13 @@ This tutorial will be updated shortly to reflect those changes.
 
 ## Preliminaries
 
-In this tutorial, it is assumed that you are already familiar with deploying smart contracts on zkSync. If not, please refer to the first section of the [quickstart tutorial](../building-on-zksync/hello-world.md).
+In this tutorial, it is assumed that you are already familiar with deploying smart contracts on zkSync. If not, please refer to the first section of the [quickstart tutorial](../developer-guides/hello-world.md).
 
 It is also assumed that you already have some experience working with Ethereum.
+
+Note: This tutorial was made with the following versions: 
+- `yarn@3.4.1`
+- `node@16.19.0`
 
 ## Project structure
 
@@ -49,10 +53,15 @@ To interact with the zkSync bridge contract using Solidity, you need to use the 
 We'll go with option 1 and install the `@matterlabs/zksync-contracts` package by running the following command (just make sure you're inside the `/L1-governance` folder):
 
 ```
-yarn add -D @matterlabs/zksync-contracts
+yarn add -D @matterlabs/zksync-contracts @openzeppelin/contracts
 ```
 
-The code of the governance contract that we will deploy on L1 is the following:
+Create a new file where we'll put our governance contract:
+
+```
+touch governance.sol
+```
+Paste the following code into the file:
 
 ```sol
 //SPDX-License-Identifier: Unlicense
@@ -71,12 +80,15 @@ contract Governance {
         address zkSyncAddress,
         address contractAddr,
         bytes memory data,
-        uint64 gasLimit
+        uint64 l2GasLimit,
+        uint256 l2GasPerPubdataByteLimit,
+        bytes[] memory factoryDeps,
+        address refundRecipient
     ) external payable {
         require(msg.sender == governor, "Only governor is allowed");
 
         IZkSync zksync = IZkSync(zkSyncAddress);
-        zksync.requestL2Transaction{value: msg.value}(contractAddr, 0, data, gasLimit, new bytes[](0));
+        zksync.requestL2Transaction{value: msg.value}(contractAddr, 0, data, l2GasLimit, l2GasPerPubdataByteLimit, new bytes[](0), msg.sender);
     }
 }
 ```
@@ -89,7 +101,7 @@ You can [learn more about L1-L2 communication in this section of the docs](../de
 
 Although this tutorial does not focus on the process of deploying contracts on L1, we'll give you a quick overview on how to continue.
 
-1. You'll need an RPC node endpoint to the Göerli testnet to submit the deployment transaction. You can [find multiple node providers here](https://github.com/arddluma/awesome-list-rpc-nodes-providers).
+1. You'll need an RPC node endpoint to the Göerli testnet to submit the deploymet transaction. You can [find multiple node providers here](https://github.com/arddluma/awesome-list-rpc-nodes-providers), developers typically use either [Infura](https://infura.io) or [Alchemy](https://alchemy.com).
 
 2. Create the file `/L1-governance/goerli.json` and fill in the following values:
 
@@ -103,26 +115,23 @@ Although this tutorial does not focus on the process of deploying contracts on L
 3. Add the Göerli network section to the `hardhat.config.ts` file:
 
 ```ts
-import { HardhatUserConfig, task } from "hardhat/config";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
 
 // import file with Göerli params
 const goerli = require("./goerli.json");
 
-const config: HardhatUserConfig = {
+module.exports = {
   solidity: {
-    version: "0.8.4",
-    networks: {
+    version: "0.8.9"},
+  networks: {
       // Göerli network
       goerli: {
         url: goerli.nodeUrl,
         accounts: [goerli.deployerPrivateKey],
       },
     },
-  },
-};
+  };
 ```
 
 4. Create the deployment script `/L1-governance/scripts/deploy.ts` with the following code:
@@ -175,7 +184,7 @@ Now that we have the L1 governance contract addressed, let's proceed with the co
 ```
 yarn init -y
 # install all dependencies
-yarn add -D typescript ts-node ethers@^5.7.2 zksync-web3@^0.13.1 hardhat @matterlabs/hardhat-zksync-solc @matterlabs/hardhat-zksync-deploy
+yarn add -D typescript ts-node ethers@^5.7.2 @ethersproject/web @ethersproject/hash zksync-web3@^0.13.0 hardhat @matterlabs/hardhat-zksync-solc @matterlabs/hardhat-zksync-deploy
 ```
 
 ::: tip
@@ -227,7 +236,7 @@ You can use the zkSync CLI to scaffold a project automatically. Find [more info 
 
 ```sol
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.16;
 
 contract Counter {
     uint256 public value = 0;
@@ -303,13 +312,13 @@ In the output, you should see the address to which the contract was deployed.
 
 ::: tip
 
-You can find more specific details about deploying contracts in the [quickstart tutorial](../building-on-zksync/hello-world.md) or the documentation for the [hardhat plugins](../../api/hardhat/getting-started.md) for zkSync.
+You can find more specific details about deploying contracts in the [quickstart tutorial](../developer-guides/hello-world.md) or the documentation for the [hardhat plugins](../../api/hardhat/getting-started.md) for zkSync.
 
 :::
 
 ## Reading the counter value
 
-With both contracts deployed, we can create a small script to retrieve the value of the counter. For the sake of simplicity, we will create this script inside the `/L2-counter` folder. To keep the tutorial generic hardhat-specific features will not be used in it.
+With both contracts deployed, we can create a small script to retrieve the value of the counter. For the sake of simplicity, we will create this scripts inside the `/L2-counter` folder. To keep the tutorial generic hardhat-specific features will not be used in it.
 
 ### Getting the ABI of the counter contract
 
